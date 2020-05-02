@@ -54,19 +54,18 @@ func (s *SyncSet) Len() int {
 }
 
 // Each ...
-func (s *SyncSet) Each(cb func(v interface{})) {
+func (s *SyncSet) Each(cb func(v interface{}) bool) {
 	s.arr.Range(func(k, _ interface{}) bool {
-		cb(k)
-		return true
+		return cb(k)
 	})
 }
 
 // ToSlice ...
 func (s *SyncSet) ToSlice() []interface{} {
 	arr := make([]interface{}, 0, s.Len())
-	s.Each(func(v interface{}) {
+	s.Each(func(v interface{}) bool {
 		arr = append(arr, v)
-
+		return true
 	})
 	return arr
 }
