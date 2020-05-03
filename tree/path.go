@@ -10,14 +10,13 @@ func SearchShortestPath(tA, tB *Tree, l int16) (*set.Set, int16) {
 	lB2 := tB.Level(l - 1).Len()
 
 	var inter []uint32
-	bIsShort := false
+	bIsShort := lA+lB2 > lB+lA2
 
 	// even length (A - x - (x - x) - x - B)
-	if lA+lB2 > lB+lA2 {
-		inter = intersect(tA.Level(l-1), tB.Level(l))
-	} else {
-		bIsShort = true
+	if bIsShort {
 		inter = intersect(tA.Level(l), tB.Level(l-1))
+	} else {
+		inter = intersect(tA.Level(l-1), tB.Level(l))
 	}
 
 	if len(inter) > 0 {

@@ -10,6 +10,15 @@ type Vertex struct {
 	Marked   bool
 }
 
+// NewVertex ...
+func NewVertex() *Vertex {
+	return &Vertex{
+		Parents:  set.New(),
+		Siblings: set.New(),
+		Children: set.New(),
+	}
+}
+
 // AddParent ...
 func (v *Vertex) AddParent(parent uint32) bool {
 	if !v.Parents.Contain(parent) {

@@ -69,11 +69,7 @@ func (l *Level) AddVertex(vertex uint32) *Vertex {
 	}
 
 	l.t.CountVertex++
-	v := &Vertex{
-		Parents:  set.New(),
-		Siblings: set.New(),
-		Children: set.New(),
-	}
+	v := NewVertex()
 	l.l[vertex] = v
 
 	return v
