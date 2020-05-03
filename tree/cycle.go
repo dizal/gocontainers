@@ -4,8 +4,14 @@ import "github.com/dizal/gocontainers/set"
 
 // CyclicData ...
 type CyclicData struct {
-	Vertexes map[uint32]int16
+	Vertexes map[uint32]CyclicVertexData
 	Count    uint32
+}
+
+// CyclicVertexData ...
+type CyclicVertexData struct {
+	Level  int16
+	Degree int
 }
 
 // SearchCyclicVertexes ...
@@ -14,7 +20,7 @@ func (t *Tree) SearchCyclicVertexes(
 	onlyMainCycle, calcDegree bool,
 	additionalCycleCheck func(vertexes map[uint32]int16) bool,
 ) *CyclicData {
-	c := CyclicData{make(map[uint32]int16), 0}
+	c := CyclicData{make(map[uint32]CyclicVertexData), 0}
 
 	for ; level > 1; level-- {
 		saw := set.New()
@@ -51,14 +57,15 @@ func (t *Tree) SearchCyclicVertexes(
 	}
 
 	if calcDegree {
-		for v, l := range c.Vertexes {
-			if vv, ok := t.Level(l).Get(v); ok {
+		for v, d := range c.Vertexes {
+			if vv, ok := t.Level(d.Level).Get(v); ok {
 				vv.Mark()
 			}
 		}
 
-		for node, level := range c.Vertexes {
-			c.Vertexes[node] = int16(t.Level(level).GetVertexDegreeMarked(node))
+		for v, d := range c.Vertexes {
+			d.Degree = t.Level(level).GetVertexDegreeMarked(v)
+			c.Vertexes[v] = d
 		}
 	}
 
@@ -136,7 +143,9 @@ func (t *Tree) makeCycle(
 	}
 
 	for v, level := range cycleVertexes {
-		c.Vertexes[v] = level
+		c.Vertexes[v] = CyclicVertexData{
+			Level: level,
+		}
 	}
 	c.Count++
 }
