@@ -9,7 +9,7 @@ func SearchShortestPath(tA, tB *Tree, l int16) (*set.Set, int16) {
 	lA2 := tA.Level(l - 1).Len()
 	lB2 := tB.Level(l - 1).Len()
 
-	var inter []uint32
+	var inter []interface{}
 	bIsShort := lA+lB2 > lB+lA2
 
 	// even length (A - x - (x - x) - x - B)
@@ -25,7 +25,7 @@ func SearchShortestPath(tA, tB *Tree, l int16) (*set.Set, int16) {
 		}
 		return makePath(tA, tB, inter, l-1, l)
 	}
-	// odd length (А - x - (x) - x - B)
+	// odd length (A - x - (x) - x - B)
 	inter = intersect(tA.Level(l), tB.Level(l))
 	if len(inter) > 0 {
 		return makePath(tA, tB, inter, l, l)
@@ -34,7 +34,7 @@ func SearchShortestPath(tA, tB *Tree, l int16) (*set.Set, int16) {
 	return nil, 0
 }
 
-func makePath(tA, tB *Tree, inter []uint32, l1, l2 int16) (*set.Set, int16) {
+func makePath(tA, tB *Tree, inter []interface{}, l1, l2 int16) (*set.Set, int16) {
 	path := set.New()
 	for _, vertex := range inter {
 		path.Add(vertex)
@@ -44,12 +44,12 @@ func makePath(tA, tB *Tree, inter []uint32, l1, l2 int16) (*set.Set, int16) {
 	return path, l1 + l2
 }
 
-func getNextVertex(path *set.Set, t *Tree, vertex uint32, d int16) {
+func getNextVertex(path *set.Set, t *Tree, vertex interface{}, d int16) {
 	if p, ok := t.Level(d).Get(vertex); p != nil && ok {
 		p.Parents.Each(func(k interface{}) bool {
-			if t.Level(d - 1).Contain(k.(uint32)) {
+			if t.Level(d - 1).Contain(k) {
 				path.Add(k)
-				getNextVertex(path, t, k.(uint32), d-1)
+				getNextVertex(path, t, k, d-1)
 			}
 			return true
 		})

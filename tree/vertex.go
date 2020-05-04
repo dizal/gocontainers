@@ -1,6 +1,11 @@
 package tree
 
-import "github.com/dizal/gocontainers/set"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/dizal/gocontainers/set"
+)
 
 // Vertex ...
 type Vertex struct {
@@ -20,7 +25,7 @@ func NewVertex() *Vertex {
 }
 
 // AddParent ...
-func (v *Vertex) AddParent(parent uint32) bool {
+func (v *Vertex) AddParent(parent interface{}) bool {
 	if !v.Parents.Contain(parent) {
 		v.Parents.Add(parent)
 		return true
@@ -29,7 +34,7 @@ func (v *Vertex) AddParent(parent uint32) bool {
 }
 
 // AddChild ...
-func (v *Vertex) AddChild(child uint32) bool {
+func (v *Vertex) AddChild(child interface{}) bool {
 	if !v.Children.Contain(child) {
 		v.Children.Add(child)
 		return true
@@ -38,7 +43,7 @@ func (v *Vertex) AddChild(child uint32) bool {
 }
 
 // AddSibling ...
-func (v *Vertex) AddSibling(sib uint32) bool {
+func (v *Vertex) AddSibling(sib interface{}) bool {
 	if !v.Siblings.Contain(sib) {
 		v.Siblings.Add(sib)
 		return true
@@ -64,4 +69,15 @@ func (v *Vertex) Degree() int {
 // Mark ...
 func (v *Vertex) Mark() {
 	v.Marked = true
+}
+
+func (v *Vertex) String() string {
+	var buffer strings.Builder
+	buffer.WriteString("V[")
+	buffer.WriteString(fmt.Sprintf("P:%v, ", v.Parents))
+	buffer.WriteString(fmt.Sprintf("C:%v, ", v.Children))
+	buffer.WriteString(fmt.Sprintf("S:%v, ", v.Siblings))
+	buffer.WriteString(fmt.Sprintf("M:%v", v.Marked))
+	buffer.WriteString("]")
+	return buffer.String()
 }

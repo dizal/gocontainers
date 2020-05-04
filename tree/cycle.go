@@ -1,10 +1,14 @@
 package tree
 
-import "github.com/dizal/gocontainers/set"
+import (
+	"fmt"
+
+	"github.com/dizal/gocontainers/set"
+)
 
 // CyclicData ...
 type CyclicData struct {
-	Vertexes map[uint32]CyclicVertexData
+	Vertexes map[interface{}]CyclicVertexData
 	Count    uint32
 }
 
@@ -14,19 +18,23 @@ type CyclicVertexData struct {
 	Degree int
 }
 
+func (c CyclicVertexData) String() string {
+	return fmt.Sprintf("Vdata<L:%v, D:%v>", c.Level, c.Degree)
+}
+
 // SearchCyclicVertexes ...
 func (t *Tree) SearchCyclicVertexes(
 	level int16,
 	onlyMainCycle, calcDegree bool,
-	additionalCycleCheck func(vertexes map[uint32]int16) bool,
+	additionalCycleCheck func(vertexes map[interface{}]int16) bool,
 ) *CyclicData {
-	c := CyclicData{make(map[uint32]CyclicVertexData), 0}
+	c := CyclicData{make(map[interface{}]CyclicVertexData), 0}
 
-	for ; level > 1; level-- {
+	for ; level > 0; level-- {
 		saw := set.New()
 		l := t.Level(level)
 
-		l.Each(func(vID uint32, vData *Vertex) bool {
+		l.Each(func(vID interface{}, vData *Vertex) bool {
 			var initVertexes []interface{}
 
 			if vData.Siblings.Len() > 0 {
@@ -41,8 +49,10 @@ func (t *Tree) SearchCyclicVertexes(
 				})
 
 				initVertexes = sibs.ToSlice()
-			} else if vData.Parents.Len() > 0 && !saw.Contain(vID) {
-				initVertexes = []interface{}{vID}
+			} else if vData.Parents.Len() > 1 {
+				if !saw.Contain(vID) {
+					initVertexes = []interface{}{vID}
+				}
 			}
 			for _, v := range initVertexes {
 				saw.Add(v)
@@ -64,7 +74,7 @@ func (t *Tree) SearchCyclicVertexes(
 		}
 
 		for v, d := range c.Vertexes {
-			d.Degree = t.Level(level).GetVertexDegreeMarked(v)
+			d.Degree = t.Level(d.Level).GetVertexDegreeMarked(v)
 			c.Vertexes[v] = d
 		}
 	}
@@ -77,19 +87,18 @@ func (t *Tree) makeCycle(
 	initLevel int16,
 	initVertexes []interface{},
 	onlyMain bool,
-	additionalCheck func(vertexes map[uint32]int16) bool,
+	additionalCheck func(vertexes map[interface{}]int16) bool,
 ) {
 	var temp set.Set
 
-	cycleVertexes := make(map[uint32]int16)
+	cycleVertexes := make(map[interface{}]int16)
 
 	// узлы, которые находятся на текущем уровне
 	vertexesOnLevel := *set.New()
 
 	for _, v := range initVertexes {
-		vv := v.(uint32)
-		cycleVertexes[vv] = initLevel
-		vertexesOnLevel.Add(vv)
+		cycleVertexes[v] = initLevel
+		vertexesOnLevel.Add(v)
 	}
 
 	for level := initLevel; level > 0; level-- {
@@ -98,19 +107,19 @@ func (t *Tree) makeCycle(
 		l := t.Level(level)
 
 		parentContain := func(parent interface{}) bool {
-			if t.Level(level - 1).Contain(parent.(uint32)) {
+			if t.Level(level - 1).Contain(parent) {
 				temp.Add(parent)
 			}
 			return true
 		}
 
 		vertexesOnLevel.Each(func(v interface{}) bool {
-			if vertex, ok := l.Get(v.(uint32)); ok {
+			if vertex, ok := l.Get(v); ok {
 
 				vertex.Parents.Each(parentContain)
 
 				vertex.Siblings.Each(func(s interface{}) bool {
-					if sib, ok := l.Get(s.(uint32)); ok {
+					if sib, ok := l.Get(s); ok {
 						sib.Parents.Each(parentContain)
 					}
 
@@ -124,7 +133,7 @@ func (t *Tree) makeCycle(
 		vertexesOnLevel = temp
 
 		temp.Each(func(v interface{}) bool {
-			cycleVertexes[v.(uint32)] = level - 1
+			cycleVertexes[v] = level - 1
 			return true
 		})
 

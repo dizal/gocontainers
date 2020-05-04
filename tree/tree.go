@@ -1,6 +1,9 @@
 package tree
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/dizal/gocontainers/indexstore"
 )
 
@@ -35,7 +38,7 @@ func (t *Tree) Level(level int16) *Level {
 
 	l := &Level{
 		id: level,
-		l:  make(map[uint32]*Vertex),
+		l:  make(map[interface{}]*Vertex),
 		t:  t,
 	}
 	t.levels[level] = l
@@ -48,4 +51,20 @@ func (t *Tree) Erase() {
 	t.levels = make(map[int16]*Level)
 	t.CountEdges = 0
 	t.CountVertex = 0
+}
+
+func (t *Tree) String() string {
+	var buffer strings.Builder
+	buffer.WriteString(fmt.Sprintf("Tree: V:%v, E:%v (\n", t.CountVertex, t.CountEdges))
+
+	for level := int16(0); true; level++ {
+		if v, ok := t.levels[level]; ok {
+			buffer.WriteString(v.String())
+		} else {
+			break
+		}
+	}
+	buffer.WriteString(")")
+
+	return buffer.String()
 }

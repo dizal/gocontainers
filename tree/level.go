@@ -1,29 +1,34 @@
 package tree
 
-import "github.com/dizal/gocontainers/set"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/dizal/gocontainers/set"
+)
 
 // Level ...
 type Level struct {
 	id int16
-	l  map[uint32]*Vertex
+	l  map[interface{}]*Vertex
 	t  *Tree
 }
 
 // Each ...
-func (l *Level) Each(f func(i uint32, v *Vertex) bool) {
+func (l *Level) Each(f func(i interface{}, v *Vertex) bool) {
 	for v := range l.l {
 		f(v, l.l[v])
 	}
 }
 
 // Get ...
-func (l *Level) Get(v uint32) (*Vertex, bool) {
+func (l *Level) Get(v interface{}) (*Vertex, bool) {
 	vv, ok := l.l[v]
 	return vv, ok
 }
 
 // Contain ...
-func (l *Level) Contain(v uint32) bool {
+func (l *Level) Contain(v interface{}) bool {
 	_, ok := l.l[v]
 	return ok
 }
@@ -34,8 +39,8 @@ func (l *Level) Len() int {
 }
 
 // ToSlice ...
-func (l *Level) ToSlice() []uint32 {
-	s := make([]uint32, 0, l.Len())
+func (l *Level) ToSlice() []interface{} {
+	s := make([]interface{}, 0, l.Len())
 
 	for v := range l.l {
 		s = append(s, v)
@@ -49,9 +54,12 @@ func (l *Level) ToStoreSlice() []interface{} {
 	s := make([]interface{}, 0, l.Len())
 
 	for k := range l.l {
-		if v, ok := l.t.Store.GetValue(k); ok {
-			s = append(s, v)
+		if kk, ok := k.(uint32); ok {
+			if v, ok2 := l.t.Store.GetValue(kk); ok2 {
+				s = append(s, v)
+			}
 		}
+
 	}
 
 	return s
@@ -63,7 +71,7 @@ func (l *Level) AddVertexWithStore(v string) {
 }
 
 // AddVertex ...
-func (l *Level) AddVertex(vertex uint32) *Vertex {
+func (l *Level) AddVertex(vertex interface{}) *Vertex {
 	if v, ok := l.Get(vertex); ok {
 		return v
 	}
@@ -83,7 +91,7 @@ func (l *Level) AddEdgeWithStore(source, target interface{}) {
 }
 
 // AddEdge ...
-func (l *Level) AddEdge(source, target uint32) {
+func (l *Level) AddEdge(source, target interface{}) {
 	// | old | cur | new |
 	// |level|level|level|
 	// |_____|_____|_____|
@@ -115,6 +123,7 @@ func (l *Level) AddEdge(source, target uint32) {
 		vB.AddSibling(target)
 		vD.AddSibling(source)
 		l.t.CountEdges++
+		return
 	}
 
 	if B {
@@ -129,36 +138,38 @@ func (l *Level) AddEdge(source, target uint32) {
 }
 
 // GetRecursionSibling ...
-func (l *Level) GetRecursionSibling(checked *set.Set, vertex uint32) {
+func (l *Level) GetRecursionSibling(checked *set.Set, vertex interface{}) {
 	checked.Add(vertex)
 	if v, ok := l.Get(vertex); ok {
 		v.Siblings.Each(func(vv interface{}) bool {
-			l.GetRecursionSibling(checked, vv.(uint32))
+			if !checked.Contain(vv) {
+				l.GetRecursionSibling(checked, vv)
+			}
 			return true
 		})
 	}
 }
 
 // GetVertexDegreeMarked ...
-func (l *Level) GetVertexDegreeMarked(vertex uint32) int {
+func (l *Level) GetVertexDegreeMarked(vertex interface{}) int {
 	if v, ok := l.Get(vertex); ok {
 		d := 0
 		pLevel, cLevel := l.t.Level(l.id-1), l.t.Level(l.id+1)
 
 		v.Parents.Each(func(parent interface{}) bool {
-			if vv, ok := pLevel.Get(parent.(uint32)); ok && vv.Marked {
+			if vv, ok := pLevel.Get(parent); ok && vv.Marked {
 				d++
 			}
 			return true
 		})
 		v.Children.Each(func(child interface{}) bool {
-			if vv, ok := cLevel.Get(child.(uint32)); ok && vv.Marked {
+			if vv, ok := cLevel.Get(child); ok && vv.Marked {
 				d++
 			}
 			return true
 		})
 		v.Siblings.Each(func(sib interface{}) bool {
-			if vv, ok := l.Get(sib.(uint32)); ok && vv.Marked {
+			if vv, ok := l.Get(sib); ok && vv.Marked {
 				d++
 			}
 			return true
@@ -171,10 +182,10 @@ func (l *Level) GetVertexDegreeMarked(vertex uint32) int {
 }
 
 // intersect ...
-func intersect(l1, l2 *Level) []uint32 {
-	var c []uint32
+func intersect(l1, l2 *Level) []interface{} {
+	var c []interface{}
 
-	l2.Each(func(i uint32, _ *Vertex) bool {
+	l2.Each(func(i interface{}, _ *Vertex) bool {
 		if l1.Contain(i) {
 			c = append(c, i)
 		}
@@ -182,4 +193,18 @@ func intersect(l1, l2 *Level) []uint32 {
 	})
 
 	return c
+}
+
+func (l *Level) String() string {
+	var buffer strings.Builder
+	buffer.WriteString(fmt.Sprintf("L%v{\n", l.id))
+
+	l.Each(func(i interface{}, v *Vertex) bool {
+		buffer.WriteString(fmt.Sprintf("\t%v = %v\n", i, v))
+		return true
+	})
+
+	buffer.WriteString("}\n")
+
+	return buffer.String()
 }
