@@ -11,13 +11,13 @@ const DefaultSleepTime = 50 * time.Millisecond
 // Pool ...
 type Pool struct {
 	sync.Mutex
-	max   uint8
-	count uint8
+	max   uint16
+	count uint16
 	sleep time.Duration
 }
 
 // New ...
-func New(max uint8, sleep time.Duration) Pool {
+func New(max uint16, sleep time.Duration) Pool {
 	return Pool{
 		max:   max,
 		sleep: sleep,
