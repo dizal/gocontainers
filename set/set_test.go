@@ -1,6 +1,9 @@
 package set
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 func TestSetNew(t *testing.T) {
 	s := New()
@@ -60,5 +63,22 @@ func TestSetErase(t *testing.T) {
 
 	if s.Len() != 0 {
 		t.Error("erase: set length is not null")
+	}
+}
+
+func BenchmarkSetAdd(b *testing.B) {
+	b.ReportAllocs()
+	var testSet []string
+	for i := 0; i < 1024; i++ {
+		testSet = append(testSet, strconv.Itoa(i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		set := New()
+		b.StartTimer()
+		for _, elem := range testSet {
+			set.Add(elem)
+		}
 	}
 }

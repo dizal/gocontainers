@@ -1,5 +1,10 @@
 package set
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Set ...
 type Set struct {
 	arr map[interface{}]struct{}
@@ -13,22 +18,26 @@ func New() *Set {
 }
 
 // Add ...
-func (s *Set) Add(v ...interface{}) {
-	for _, vv := range v {
-		s.arr[vv] = struct{}{}
+func (s *Set) Add(value interface{}) bool {
+	if !s.Contain(value) {
+		s.arr[value] = struct{}{}
+		return true
 	}
+	return false
 }
 
 // Delete ...
-func (s *Set) Delete(v ...interface{}) {
-	for _, vv := range v {
-		delete(s.arr, vv)
+func (s *Set) Delete(value interface{}) bool {
+	if s.Contain(value) {
+		delete(s.arr, value)
+		return true
 	}
+	return false
 }
 
 // Contain ...
-func (s *Set) Contain(v interface{}) bool {
-	_, ok := s.arr[v]
+func (s *Set) Contain(value interface{}) bool {
+	_, ok := s.arr[value]
 	return ok
 }
 
@@ -38,9 +47,9 @@ func (s *Set) Len() int {
 }
 
 // Each ...
-func (s *Set) Each(cb func(v interface{}) bool) {
+func (s *Set) Each(f func(value interface{}) bool) {
 	for v := range s.arr {
-		if !cb(v) {
+		if !f(v) {
 			break
 		}
 	}
@@ -63,4 +72,16 @@ func (s *Set) IsEmpty() bool {
 // Erase ...
 func (s *Set) Erase() {
 	s.arr = make(map[interface{}]struct{})
+}
+
+func (s *Set) String() string {
+	var buffer strings.Builder
+	buffer.WriteString("Set<")
+	s.Each(func(value interface{}) bool {
+		buffer.WriteString(fmt.Sprintf("%v,", value))
+		return true
+	})
+
+	buffer.WriteString(">")
+	return buffer.String()
 }
