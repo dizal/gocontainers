@@ -4,60 +4,63 @@ import "sync"
 
 // SyncSet ...
 type SyncSet struct {
-	m    sync.RWMutex
-	arr  sync.Map
-	size int
+	mx  sync.RWMutex
+	arr map[interface{}]struct{}
 }
 
 // New ...
 func New() *SyncSet {
-	return &SyncSet{}
+	return &SyncSet{
+		arr: make(map[interface{}]struct{}),
+	}
 }
 
 // Add ...
-func (s *SyncSet) Add(v ...interface{}) {
-	for _, vv := range v {
-		if _, ok := s.arr.Load(vv); !ok {
-			s.arr.Store(vv, struct{}{})
-			s.m.Lock()
-			s.size++
-			s.m.Unlock()
-		}
+func (s *SyncSet) Add(value interface{}) bool {
+	if !s.Contain(value) {
+		s.mx.Lock()
+		s.arr[value] = struct{}{}
+		s.mx.Unlock()
+		return true
 	}
+	return false
 }
 
 // Delete ...
-func (s *SyncSet) Delete(v ...interface{}) {
-	for _, vv := range v {
-		if _, ok := s.arr.Load(vv); ok {
-			s.arr.Delete(vv)
-			s.m.Lock()
-			if s.size > 0 {
-				s.size--
-			}
-			s.m.Unlock()
-		}
+func (s *SyncSet) Delete(value interface{}) bool {
+	if s.Contain(value) {
+		s.mx.Lock()
+		delete(s.arr, value)
+		s.mx.Unlock()
+		return true
 	}
+	return false
 }
 
 // Contain ...
-func (s *SyncSet) Contain(v interface{}) bool {
-	_, ok := s.arr.Load(v)
+func (s *SyncSet) Contain(value interface{}) bool {
+	s.mx.RLock()
+	defer s.mx.RUnlock()
+	_, ok := s.arr[value]
 	return ok
 }
 
 // Len ...
 func (s *SyncSet) Len() int {
-	s.m.RLock()
-	defer s.m.RUnlock()
-	return s.size
+	s.mx.RLock()
+	defer s.mx.RUnlock()
+	return len(s.arr)
 }
 
 // Each ...
-func (s *SyncSet) Each(cb func(v interface{}) bool) {
-	s.arr.Range(func(k, _ interface{}) bool {
-		return cb(k)
-	})
+func (s *SyncSet) Each(f func(value interface{}) bool) {
+	s.mx.RLock()
+	for k := range s.arr {
+		if !f(k) {
+			break
+		}
+	}
+	s.mx.RUnlock()
 }
 
 // ToSlice ...
@@ -77,8 +80,7 @@ func (s *SyncSet) IsEmpty() bool {
 
 // Erase ...
 func (s *SyncSet) Erase() {
-	s.m.Lock()
-	defer s.m.Unlock()
-	s.arr = sync.Map{}
-	s.size = 0
+	s.mx.Lock()
+	s.arr = map[interface{}]struct{}{}
+	s.mx.Unlock()
 }
