@@ -93,7 +93,6 @@ func (t *Tree) makeCycle(
 
 	cycleVertexes := make(map[interface{}]int16)
 
-	// узлы, которые находятся на текущем уровне
 	vertexesOnLevel := *set.New()
 
 	for _, v := range initVertexes {

@@ -21,7 +21,7 @@ type Tree struct {
 	CountVertex, CountEdges uint32
 }
 
-// New - создание нового дерева
+// New ...
 func New(s *indexstore.IndexStore) *Tree {
 	t := &Tree{
 		levels: make(map[int16]*Level),
