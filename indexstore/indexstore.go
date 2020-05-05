@@ -4,19 +4,32 @@ import "sync"
 
 // IndexStore ...
 type IndexStore struct {
-	mx    sync.RWMutex
-	store map[interface{}]uint32
-	revst map[uint32]interface{}
-	size  uint32
-	index uint32
+	mx     sync.RWMutex
+	store  map[interface{}]uint32
+	revst  []interface{}
+	size   uint32
+	cap    uint32
+	index  uint32
+	bucket uint32
 }
 
 // New ...
 func New() *IndexStore {
 	return &IndexStore{
-		revst: make(map[uint32]interface{}),
-		store: make(map[interface{}]uint32),
+		store:  make(map[interface{}]uint32),
+		revst:  make([]interface{}, 0),
+		bucket: 10000,
 	}
+}
+
+// NewWithBucket ...
+func NewWithBucket(bucket uint32) *IndexStore {
+	s := New()
+	if bucket < 10 {
+		bucket = 10
+	}
+	s.bucket = bucket
+	return s
 }
 
 // Store - store value and return index
@@ -25,6 +38,7 @@ func (s *IndexStore) Store(value interface{}) uint32 {
 	if !ok {
 		s.mx.Lock()
 		s.store[value] = s.index
+		s.increaseRevSize()
 		s.revst[s.index] = value
 
 		i = s.index
@@ -33,6 +47,17 @@ func (s *IndexStore) Store(value interface{}) uint32 {
 		s.mx.Unlock()
 	}
 	return i
+}
+
+func (s *IndexStore) increaseRevSize() {
+	if s.index+1 <= s.cap {
+		s.revst = s.revst[:s.index+1]
+	} else {
+		s.cap += s.bucket
+		z := make([]interface{}, s.index+1, s.cap)
+		copy(z, s.revst)
+		s.revst = z
+	}
 }
 
 // GetIndex - get index by value
@@ -46,9 +71,15 @@ func (s *IndexStore) GetIndex(value interface{}) (uint32, bool) {
 // GetValue - get value by index
 func (s *IndexStore) GetValue(index uint32) (interface{}, bool) {
 	s.mx.RLock()
-	v, ok := s.revst[index]
+	if index > s.index {
+		return nil, false
+	}
+	v := s.revst[index]
 	s.mx.RUnlock()
-	return v, ok
+	if v == nil {
+		return nil, false
+	}
+	return v, true
 }
 
 // GetStringValue - get value by index
@@ -66,8 +97,10 @@ func (s *IndexStore) Del(value interface{}) {
 	if i, ok := s.GetIndex(value); ok {
 		s.mx.Lock()
 		delete(s.store, value)
-		delete(s.revst, i)
-		s.size--
+		s.revst[i] = nil
+		if s.size > 0 {
+			s.size--
+		}
 		s.mx.Unlock()
 	}
 }
@@ -83,7 +116,7 @@ func (s *IndexStore) Size() uint32 {
 func (s *IndexStore) Erase() {
 	s.mx.Lock()
 	s.store = make(map[interface{}]uint32)
-	s.revst = make(map[uint32]interface{})
+	s.revst = make([]interface{}, 0)
 	s.index = 0
 	s.size = 0
 	s.mx.Unlock()
