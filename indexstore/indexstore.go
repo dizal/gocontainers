@@ -116,5 +116,6 @@ func (s *IndexStore) Erase() {
 	s.revst = make([]interface{}, 0)
 	s.index = 0
 	s.size = 0
+	s.cap = 0
 	s.mx.Unlock()
 }

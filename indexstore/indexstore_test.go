@@ -74,6 +74,21 @@ func TestStoreDelete(t *testing.T) {
 	}
 }
 
+func TestStoreErase(t *testing.T) {
+	s := New()
+	s.Store("value1")
+	s.Store("value2")
+	s.Store("value3")
+
+	s.Erase()
+
+	s.Store("value1")
+
+	if s.Size() != 1 {
+		t.Error("erase: Store length is not 0")
+	}
+}
+
 func BenchmarkStoreAdd(b *testing.B) {
 	b.ReportAllocs()
 	var testSet []string
