@@ -1,61 +1,34 @@
 package pool
 
-import (
-	"sync"
-	"time"
-)
+import "sync"
 
-// DefaultSleepTime ...
-const DefaultSleepTime = 50 * time.Millisecond
-
-// Pool ...
+// Pool implements a simple goruntine pool
 type Pool struct {
-	sync.Mutex
-	max   uint16
-	count uint16
-	sleep time.Duration
+	wg   sync.WaitGroup
+	pool chan byte
 }
 
-// New ...
-func New(max uint16, sleep time.Duration) Pool {
+// New creates a waitgroup with a specific size (the maximum number of
+// goroutines to run at the same time).
+func New(size int) Pool {
 	return Pool{
-		max:   max,
-		sleep: sleep,
+		pool: make(chan byte, size),
 	}
 }
 
-// Add ...
+// Add pushes ‘one’ into the group. Blocks if the group is full
 func (p *Pool) Add() {
-	p.Lock()
-	p.count++
-	p.Unlock()
+	p.pool <- 1
+	p.wg.Add(1)
 }
 
-// Done ...
+// Done pops ‘one’ out the group
 func (p *Pool) Done() {
-	p.Lock()
-	p.count--
-	p.Unlock()
+	<-p.pool
+	p.wg.Done()
 }
 
-// Wait ...
+// Wait waiting the group empty
 func (p *Pool) Wait() {
-	for {
-		if p.count <= p.max {
-			break
-		} else {
-			time.Sleep(p.sleep)
-		}
-	}
-}
-
-// WaitEmpty ...
-func (p *Pool) WaitEmpty() {
-	for {
-		if p.count > 0 {
-			time.Sleep(p.sleep)
-		} else {
-			break
-		}
-	}
+	p.wg.Wait()
 }
