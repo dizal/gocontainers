@@ -76,10 +76,7 @@ func (s *IndexStore) GetValue(index uint32) (interface{}, bool) {
 	}
 	v := s.revst[index]
 	s.mx.RUnlock()
-	if v == nil {
-		return nil, false
-	}
-	return v, true
+	return v, v != nil
 }
 
 // GetStringValue - get value by index
