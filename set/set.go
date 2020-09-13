@@ -2,7 +2,7 @@ package set
 
 import (
 	"fmt"
-	"strings"
+	"unsafe"
 )
 
 // Set ...
@@ -75,13 +75,13 @@ func (s *Set) Erase() {
 }
 
 func (s *Set) String() string {
-	var buffer strings.Builder
-	buffer.WriteString("Set<")
-	s.Each(func(value interface{}) bool {
-		buffer.WriteString(fmt.Sprintf("%v,", value))
-		return true
-	})
-
-	buffer.WriteString(">")
-	return buffer.String()
+	if s.Len() == 0 {
+		return "SET<>"
+	}
+	buf := []byte("SET<")
+	for v := range s.arr {
+		buf = append(buf, fmt.Sprintf("%v, ", v)...)
+	}
+	buf = append(buf[:len(buf)-2], ">"...)
+	return *(*string)(unsafe.Pointer(&buf))
 }
