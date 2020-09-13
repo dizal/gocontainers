@@ -31,17 +31,14 @@ func New(s *indexstore.IndexStore) *Tree {
 }
 
 // Level return level from Tree
-func (t *Tree) Level(level int16) *Level {
-	if l, ok := t.levels[level]; ok {
+func (t *Tree) Level(levelID int16) *Level {
+	if l, ok := t.levels[levelID]; ok {
 		return l
 	}
 
-	l := &Level{
-		id: level,
-		l:  make(map[interface{}]*Vertex),
-		t:  t,
-	}
-	t.levels[level] = l
+	l, _ := NewLevel(levelID, t)
+
+	t.levels[levelID] = l
 
 	return l
 }

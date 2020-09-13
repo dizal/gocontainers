@@ -14,6 +14,18 @@ type Level struct {
 	t  *Tree
 }
 
+// NewLevel ...
+func NewLevel(id int16, t *Tree) (*Level, error) {
+	if t == nil {
+		return nil, fmt.Errorf("tree.Level.NewLevel: tree cannot be null")
+	}
+	return &Level{
+		id: id,
+		t:  t,
+		l:  make(map[interface{}]*Vertex),
+	}, nil
+}
+
 // Each ...
 func (l *Level) Each(f func(i interface{}, v *Vertex) bool) {
 	for v := range l.l {
