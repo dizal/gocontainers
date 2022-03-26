@@ -3,9 +3,16 @@ package tree
 import (
 	"fmt"
 	"strings"
-
-	"github.com/dizal/gocontainers/indexstore"
 )
+
+type Tree[V comparable] interface {
+	L(levelIndex int16) Level[V]
+	Erase()
+	String() string
+
+	addVetrex()
+	addEdge()
+}
 
 // Tree ...
 //    root          level 0
@@ -13,46 +20,41 @@ import (
 //  A      B        level 1
 // / \    / \
 // C  D---E  F      level 2
-type Tree struct {
-	levels map[int16]*Level
-	Store  *indexstore.IndexStore
-
-	// info
-	CountVertex, CountEdges uint32
+type tree[V comparable, L Level[V]] struct {
+	levels      map[int16]L
+	countVertex uint32
+	countEdges  uint32
 }
 
-// New ...
-func New(s *indexstore.IndexStore) *Tree {
-	t := &Tree{
-		levels: make(map[int16]*Level),
-		Store:  s,
+func New[V comparable]() Tree[V] {
+	return &tree[V, Level[V]]{
+		levels: make(map[int16]Level[V]),
 	}
-	return t
 }
 
 // Level return level from Tree
-func (t *Tree) Level(levelID int16) *Level {
-	if l, ok := t.levels[levelID]; ok {
+func (t *tree[V, L]) L(levelIndex int16) Level[V] {
+	if l, ok := t.levels[levelIndex]; ok {
 		return l
 	}
 
-	l, _ := NewLevel(levelID, t)
+	l, _ := NewLevel[V](levelIndex, t)
 
-	t.levels[levelID] = l
+	t.levels[levelIndex] = l.(L)
 
 	return l
 }
 
 // Erase ..
-func (t *Tree) Erase() {
-	t.levels = make(map[int16]*Level)
-	t.CountEdges = 0
-	t.CountVertex = 0
+func (t *tree[V, L]) Erase() {
+	t.levels = make(map[int16]L)
+	t.countEdges = 0
+	t.countVertex = 0
 }
 
-func (t *Tree) String() string {
+func (t *tree[V, L]) String() string {
 	var buffer strings.Builder
-	buffer.WriteString(fmt.Sprintf("Tree: V:%v, E:%v (\n", t.CountVertex, t.CountEdges))
+	buffer.WriteString(fmt.Sprintf("Tree: V:%v, E:%v (\n", t.countVertex, t.countEdges))
 
 	for level := int16(0); true; level++ {
 		if v, ok := t.levels[level]; ok {
@@ -64,4 +66,12 @@ func (t *Tree) String() string {
 	buffer.WriteString(")")
 
 	return buffer.String()
+}
+
+func (t *tree[V, L]) addVetrex() {
+	t.countVertex++
+}
+
+func (t *tree[V, L]) addEdge() {
+	t.countEdges++
 }

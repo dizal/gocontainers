@@ -1,122 +1,86 @@
 package graph
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestGraphNew(t *testing.T) {
-	g := New(Undirected)
-
-	if g.VertexesCount() != 0 {
-		t.Error("new: graph is not empry")
-	}
+	g := New[string](Undirected)
+	assert.Equal(t, 0, g.VertexesCount())
 }
 
 func TestGraphAddEdge(t *testing.T) {
-	g := New(Undirected)
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v3")
-	g.AddEdge("v1", "v3")
+	g := New[string](Undirected).
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v3").
+		AddEdge("v1", "v3")
 
-	if g.VertexesCount() != 3 {
-		t.Error("add: Undirected Graph Vertexes is not 3")
-	}
+	assert.Equal(t, 3, g.VertexesCount())
+	assert.Equal(t, 4, g.EdgesCount())
 
-	if g.EdgesCount() != 4 {
-		t.Error("add: Undirected Graph Edges is not 4")
-	}
+	g = New[string](Directed).
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v3").
+		AddEdge("v1", "v3")
 
-	g = New(Directed)
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v3")
-	g.AddEdge("v1", "v3")
-
-	if g.VertexesCount() != 3 {
-		t.Error("add: Directed Graph Vertexes is not 3")
-	}
-
-	if g.EdgesCount() != 2 {
-		t.Error("add: Directed Graph Edges is not 2")
-	}
+	assert.Equal(t, 3, g.VertexesCount())
+	assert.Equal(t, 2, g.EdgesCount())
 }
 
 func TestGraphGetTarget(t *testing.T) {
-	g := New(Undirected)
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v3")
-	g.AddEdge("v2", "v3")
+	g := New[string](Undirected).
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v3").
+		AddEdge("v2", "v3")
 
-	if g.VertexesCount() != 3 {
-		t.Error("get: Undirected Graph Vertexes is not 3")
-	}
+	assert.Equal(t, 3, g.VertexesCount())
+	assert.Equal(t, 6, g.EdgesCount())
 
-	if g.EdgesCount() != 6 {
-		t.Error("get: Undirected Graph Edges is not 4")
-	}
+	s, ok := g.GetTargetNodes("v3")
+	assert.True(t, ok)
+	assert.Equal(t, 2, s.Len())
+	s.Each(func(value string) bool {
+		assert.Contains(t, []string{"v1", "v2"}, value)
+		return true
+	})
 
-	s, ok := g.GetTarget("v3")
-	if !ok {
-		t.Error("get: Undirected Graph Target is empty")
-	}
-	if s.Len() != 2 {
-		t.Error("get: Undirected Graph Target length is not 2")
-	}
+	g = New[string](Directed).
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v3").
+		AddEdge("v2", "v3")
 
-	g = New(Directed)
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v3")
-	g.AddEdge("v2", "v3")
+	assert.Equal(t, 3, g.VertexesCount())
+	assert.Equal(t, 3, g.EdgesCount())
 
-	if g.VertexesCount() != 3 {
-		t.Error("get: Directed Graph Vertexes is not 3")
-	}
-
-	if g.EdgesCount() != 3 {
-		t.Error("get: Directed Graph Edges is not 2")
-	}
-
-	s, ok = g.GetTarget("v3")
-	if !ok {
-		t.Error("get: Undirected Graph Target is empty")
-	}
-	if s.Len() != 0 {
-		t.Error("get: Undirected Graph Target length is not 2")
-	}
+	s, ok = g.GetTargetNodes("v3")
+	assert.True(t, ok)
+	assert.Equal(t, 0, s.Len())
 }
 
 func TestGraphErase(t *testing.T) {
-	g := New(Undirected)
-
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v3")
-	g.AddEdge("v2", "v3")
+	g := New[string](Undirected).
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v3").
+		AddEdge("v2", "v3")
 
 	g.Erase()
 
-	if g.VertexesCount() != 0 {
-		t.Error("erase: graph is not empry")
-	}
-	if g.EdgesCount() != 0 {
-		t.Error("erase: graph is not empry")
-	}
+	assert.Equal(t, 0, g.VertexesCount())
+	assert.Equal(t, 0, g.EdgesCount())
 }
 
 func TestGraphRange(t *testing.T) {
-	g := New(Undirected)
+	g := New[string](Undirected).
+		AddEdge("v1", "v2").
+		AddEdge("v1", "v3").
+		AddEdge("v2", "v3")
 
-	g.AddEdge("v1", "v2")
-	g.AddEdge("v1", "v3")
-	g.AddEdge("v2", "v3")
-
-	g.Range("v3", func(target interface{}) bool {
-		s, ok := target.(string)
-		if !ok {
-			t.Error("range: cannot convert target value to string")
-		}
-		if !(s == "v1" || s == "v2") {
-			t.Error("range: undefined value")
-		}
-
+	g.Range("v3", func(target string) bool {
+		assert.Contains(t, []string{"v1", "v2"}, target)
 		return true
 	})
 

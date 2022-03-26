@@ -47,12 +47,12 @@ func BenchmarkSearchPath(b *testing.B) {
 	}
 }
 
-func testPath(t *testing.T, path *set.Set, length, targetLen int16) {
+func testPath(t *testing.T, path set.Set[string], length, targetLen int16) {
 	if path == nil {
 		t.Error("testPath: path is nil")
 	}
 
 	if length != targetLen {
-		t.Errorf("testPath: uncorrenct path length. Target %v. Response: %v", targetLen, length)
+		t.Errorf("testPath: uncorrected path length. Target %v. Response: %v", targetLen, length)
 	}
 }

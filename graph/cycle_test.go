@@ -24,7 +24,7 @@ func TestGraphSearchCycle1(t *testing.T) {
 func TestGraphSearchCycle2(t *testing.T) {
 	g := g2()
 
-	cd := g.SearchCycle("v1", 3, true, false, func(vertexes map[interface{}]int16) bool {
+	cd := g.SearchCycle("v1", 3, true, false, func(vertexes map[string]int16) bool {
 		// skip all cycles smaller than 3
 		return len(vertexes) > 3
 	})
@@ -78,7 +78,7 @@ func TestGraphSearchCycle4(t *testing.T) {
 func TestGraphSearchCycle5(t *testing.T) {
 	g := g5()
 
-	cd, _ := g.searchCycle("c_v1", 7, true, true, func(vertexes map[interface{}]int16) bool {
+	cd, _ := g.searchCycle("c_v1", 7, true, true, func(vertexes map[string]int16) bool {
 		// skip all cycles less then 3
 		if len(vertexes) <= 3 {
 			return false
@@ -86,7 +86,7 @@ func TestGraphSearchCycle5(t *testing.T) {
 
 		cCount := 0
 		for k := range vertexes {
-			if strings.HasPrefix(k.(string), "c_") {
+			if strings.HasPrefix(k, "c_") {
 				cCount++
 			}
 		}
@@ -123,7 +123,7 @@ func BenchmarkSearchCycle(b *testing.B) {
 	}
 }
 
-func testCycleResult(t *testing.T, cd *tree.CyclicData, target map[string]tree.CyclicVertexData, countCycles uint32) {
+func testCycleResult(t *testing.T, cd *tree.SearchCyclicResponse[string], target map[string]tree.CyclicVertexData, countCycles uint32) {
 	if cd.Count != countCycles {
 		t.Errorf("testResult: number of cycles is not equal to %v. Response: %v", countCycles, cd.Count)
 	}

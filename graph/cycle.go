@@ -5,33 +5,35 @@ import (
 )
 
 // SearchCycle ...
-func (g *Graph) SearchCycle(
-	vertex interface{},
+func (g *Graph[T]) SearchCycle(
+	vertex T,
 	maxDepth int16,
 	onlyMainCycle, calcDegree bool,
-	additionalCycleCheck func(vertexes map[interface{}]int16) bool,
-) *tree.CyclicData {
+	additionalCycleCheck func(vertexes map[T]int16) bool,
+) *tree.SearchCyclicResponse[T] {
+
 	resp, _ := g.searchCycle(vertex, maxDepth, onlyMainCycle, calcDegree, additionalCycleCheck)
 	return resp
 }
 
-func (g *Graph) searchCycle(
-	vertex interface{},
+func (g *Graph[T]) searchCycle(
+	vertex T,
 	maxDepth int16,
 	onlyMainCycle, calcDegree bool,
-	additionalCycleCheck func(v map[interface{}]int16) bool,
-) (*tree.CyclicData, *tree.Tree) {
-	t := tree.New(nil)
-	t.Level(0).AddVertex(vertex)
+	additionalCycleCheck func(v map[T]int16) bool,
+) (*tree.SearchCyclicResponse[T], tree.Tree[T]) {
+
+	t := tree.New[T]()
+	t.L(0).AddVertex(vertex)
 
 	level := int16(0)
 
 	for ; level < maxDepth; level++ {
-		if t.Level(level).Len() > 0 {
+		if t.L(level).Len() > 0 {
 
-			t.Level(level).Each(func(source interface{}, v *tree.Vertex) bool {
-				g.Range(source, func(target interface{}) bool {
-					t.Level(level+1).AddEdge(source, target)
+			t.L(level).Each(func(source T, v tree.Vertex[T]) bool {
+				g.Range(source, func(target T) bool {
+					t.L(level+1).AddEdge(source, target)
 					return true
 				})
 				return true
@@ -41,5 +43,5 @@ func (g *Graph) searchCycle(
 		}
 	}
 
-	return t.SearchCyclicVertexes(level, onlyMainCycle, calcDegree, additionalCycleCheck), t
+	return tree.SearchCyclicVertexes(t, level, onlyMainCycle, calcDegree, additionalCycleCheck), t
 }

@@ -6,13 +6,11 @@ import (
 	"github.com/dizal/gocontainers/set"
 )
 
-// CyclicData ...
-type CyclicData struct {
-	Vertexes map[interface{}]CyclicVertexData
+type SearchCyclicResponse[V comparable] struct {
+	Vertexes map[V]CyclicVertexData
 	Count    uint32
 }
 
-// CyclicVertexData ...
 type CyclicVertexData struct {
 	Level  int16
 	Degree int
@@ -23,25 +21,27 @@ func (c CyclicVertexData) String() string {
 }
 
 // SearchCyclicVertexes ...
-func (t *Tree) SearchCyclicVertexes(
+func SearchCyclicVertexes[V comparable](
+	t Tree[V],
 	level int16,
 	onlyMainCycle, calcDegree bool,
-	additionalCycleCheck func(vertexes map[interface{}]int16) bool,
-) *CyclicData {
-	c := CyclicData{make(map[interface{}]CyclicVertexData), 0}
+	additionalCycleCheck func(vertexes map[V]int16) bool,
+) *SearchCyclicResponse[V] {
+
+	res := &SearchCyclicResponse[V]{make(map[V]CyclicVertexData), 0}
 
 	for ; level > 0; level-- {
-		saw := set.New()
-		l := t.Level(level)
+		saw := set.New[V]()
+		l := t.L(level)
 
-		l.Each(func(vID interface{}, vData *Vertex) bool {
-			var initVertexes []interface{}
+		l.Each(func(vID V, vData Vertex[V]) bool {
+			var initVertexes []V
 
-			if vData.Siblings.Len() > 0 {
-				sibs := set.New()
+			if vData.Siblings().Len() > 0 {
+				sibs := set.New[V]()
 				l.GetRecursionSibling(sibs, vID)
 
-				sibs.Each(func(v interface{}) bool {
+				sibs.Each(func(v V) bool {
 					if saw.Contain(v) {
 						sibs.Delete(v)
 					}
@@ -49,9 +49,9 @@ func (t *Tree) SearchCyclicVertexes(
 				})
 
 				initVertexes = sibs.ToSlice()
-			} else if vData.Parents.Len() > 1 {
+			} else if vData.Parents().Len() > 1 {
 				if !saw.Contain(vID) {
-					initVertexes = []interface{}{vID}
+					initVertexes = []V{vID}
 				}
 			}
 			for _, v := range initVertexes {
@@ -59,7 +59,7 @@ func (t *Tree) SearchCyclicVertexes(
 			}
 
 			if len(initVertexes) > 0 {
-				t.makeCycle(&c, level, initVertexes, onlyMainCycle, additionalCycleCheck)
+				makeCycle(t, res, level, initVertexes, onlyMainCycle, additionalCycleCheck)
 			}
 
 			return true
@@ -67,33 +67,34 @@ func (t *Tree) SearchCyclicVertexes(
 	}
 
 	if calcDegree {
-		for v, d := range c.Vertexes {
-			if vv, ok := t.Level(d.Level).Get(v); ok {
+		for v, d := range res.Vertexes {
+			if vv, ok := t.L(d.Level).Get(v); ok {
 				vv.Mark()
 			}
 		}
 
-		for v, d := range c.Vertexes {
-			d.Degree = t.Level(d.Level).GetVertexDegreeMarked(v)
-			c.Vertexes[v] = d
+		for v, d := range res.Vertexes {
+			d.Degree = t.L(d.Level).GetVertexDegreeMarked(v)
+			res.Vertexes[v] = d
 		}
 	}
 
-	return &c
+	return res
 }
 
-func (t *Tree) makeCycle(
-	c *CyclicData,
+func makeCycle[V comparable](
+	t Tree[V],
+	res *SearchCyclicResponse[V],
 	initLevel int16,
-	initVertexes []interface{},
+	initVertexes []V,
 	onlyMain bool,
-	additionalCheck func(vertexes map[interface{}]int16) bool,
+	additionalCheck func(vertexes map[V]int16) bool,
 ) {
-	var temp set.Set
+	var temp set.Set[V]
 
-	cycleVertexes := make(map[interface{}]int16)
+	cycleVertexes := make(map[V]int16)
 
-	vertexesOnLevel := *set.New()
+	vertexesOnLevel := set.New[V]()
 
 	for _, v := range initVertexes {
 		cycleVertexes[v] = initLevel
@@ -101,25 +102,25 @@ func (t *Tree) makeCycle(
 	}
 
 	for level := initLevel; level > 0; level-- {
-		temp = *set.New()
+		temp = set.New[V]()
 
-		l := t.Level(level)
+		l := t.L(level)
 
-		parentContain := func(parent interface{}) bool {
-			if t.Level(level - 1).Contain(parent) {
+		parentContain := func(parent V) bool {
+			if t.L(level - 1).Contain(parent) {
 				temp.Add(parent)
 			}
 			return true
 		}
 
-		vertexesOnLevel.Each(func(v interface{}) bool {
+		vertexesOnLevel.Each(func(v V) bool {
 			if vertex, ok := l.Get(v); ok {
 
-				vertex.Parents.Each(parentContain)
+				vertex.Parents().Each(parentContain)
 
-				vertex.Siblings.Each(func(s interface{}) bool {
+				vertex.Siblings().Each(func(s V) bool {
 					if sib, ok := l.Get(s); ok {
-						sib.Parents.Each(parentContain)
+						sib.Parents().Each(parentContain)
 					}
 
 					return true
@@ -131,7 +132,7 @@ func (t *Tree) makeCycle(
 
 		vertexesOnLevel = temp
 
-		temp.Each(func(v interface{}) bool {
+		temp.Each(func(v V) bool {
 			cycleVertexes[v] = level - 1
 			return true
 		})
@@ -151,9 +152,9 @@ func (t *Tree) makeCycle(
 	}
 
 	for v, level := range cycleVertexes {
-		c.Vertexes[v] = CyclicVertexData{
+		res.Vertexes[v] = CyclicVertexData{
 			Level: level,
 		}
 	}
-	c.Count++
+	res.Count++
 }

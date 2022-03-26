@@ -7,77 +7,105 @@ import (
 	"github.com/dizal/gocontainers/set"
 )
 
-// Vertex ...
-type Vertex struct {
-	Parents  *set.Set
-	Siblings *set.Set
-	Children *set.Set
-	Marked   bool
+//  Vertex implements a tree node.
+//	L-1      parent1      parent2
+//	               \      |
+//	L0  sibling1 -- current -- sibling2
+//	               /      \
+//	L1         child1    child2
+type Vertex[T comparable] interface {
+	AddParent(parent T) bool
+	AddChild(child T) bool
+	AddSibling(sibling T) bool
+	Parents() set.Set[T]
+	Siblings() set.Set[T]
+	Children() set.Set[T]
+	Degree() int
+	Mark()
+	IsMarked() bool
+	String() string
+}
+
+type vertex[T comparable] struct {
+	parents  set.Set[T]
+	siblings set.Set[T]
+	children set.Set[T]
+	marked   bool
 }
 
 // NewVertex ...
-func NewVertex() *Vertex {
-	return &Vertex{
-		Parents:  set.New(),
-		Siblings: set.New(),
-		Children: set.New(),
+func NewVertex[T comparable]() Vertex[T] {
+	return &vertex[T]{
+		parents:  set.New[T](),
+		siblings: set.New[T](),
+		children: set.New[T](),
 	}
+}
+
+func (v *vertex[T]) Parents() set.Set[T] {
+	return v.parents
+}
+
+func (v *vertex[T]) Siblings() set.Set[T] {
+	return v.siblings
+}
+
+func (v *vertex[T]) Children() set.Set[T] {
+	return v.children
 }
 
 // AddParent ...
-func (v *Vertex) AddParent(parent interface{}) bool {
-	if !v.Parents.Contain(parent) {
-		v.Parents.Add(parent)
-		return true
-	}
-	return false
+func (v *vertex[T]) AddParent(parent T) bool {
+	return v.parents.Add(parent)
 }
 
 // AddChild ...
-func (v *Vertex) AddChild(child interface{}) bool {
-	if !v.Children.Contain(child) {
-		v.Children.Add(child)
-		return true
-	}
-	return false
+func (v *vertex[T]) AddChild(child T) bool {
+	return v.children.Add(child)
 }
 
 // AddSibling ...
-func (v *Vertex) AddSibling(sib interface{}) bool {
-	if !v.Siblings.Contain(sib) {
-		v.Siblings.Add(sib)
-		return true
-	}
-	return false
+func (v *vertex[T]) AddSibling(sib T) bool {
+	return v.siblings.Add(sib)
 }
 
 // Degree ...
-func (v *Vertex) Degree() int {
+func (v *vertex[T]) Degree() int {
 	d := 0
-	if v.Parents != nil {
-		d += v.Parents.Len()
+	if v.parents != nil {
+		d += v.parents.Len()
 	}
-	if v.Children != nil {
-		d += v.Children.Len()
+	if v.children != nil {
+		d += v.children.Len()
 	}
-	if v.Siblings != nil {
-		d += v.Siblings.Len()
+	if v.siblings != nil {
+		d += v.siblings.Len()
 	}
 	return d
 }
 
 // Mark ...
-func (v *Vertex) Mark() {
-	v.Marked = true
+func (v *vertex[T]) Mark() {
+	v.marked = true
 }
 
-func (v *Vertex) String() string {
+func (v *vertex[T]) IsMarked() bool {
+	return v.marked
+}
+
+func (v *vertex[T]) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("V[")
-	buffer.WriteString(fmt.Sprintf("P:%v, ", v.Parents))
-	buffer.WriteString(fmt.Sprintf("C:%v, ", v.Children))
-	buffer.WriteString(fmt.Sprintf("S:%v, ", v.Siblings))
-	buffer.WriteString(fmt.Sprintf("M:%v", v.Marked))
+	if v.parents != nil {
+		buffer.WriteString(fmt.Sprintf("P:%v, ", v.parents))
+	}
+	if v.children != nil {
+		buffer.WriteString(fmt.Sprintf("C:%v, ", v.children))
+	}
+	if v.siblings != nil {
+		buffer.WriteString(fmt.Sprintf("S:%v, ", v.siblings))
+	}
+	buffer.WriteString(fmt.Sprintf("M:%v", v.marked))
 	buffer.WriteString("]")
 	return buffer.String()
 }

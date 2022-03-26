@@ -3,90 +3,87 @@ package indexstore
 import (
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStoreNew(t *testing.T) {
-	s := New()
-	if s.Size() != 0 {
-		t.Error("new: store is not empry")
-	}
+	s := New[string]()
+	assert.EqualValues(t, 0, s.Size())
 }
 
 func TestStoreAdd(t *testing.T) {
-	s := New()
-	s.Store("value")
-	s.Store("value")
-	s.Store("value")
+	s := New[string]()
+	assert.EqualValues(t, 0, s.Add("value"))
+	assert.EqualValues(t, 0, s.Add("value"))
+	assert.EqualValues(t, 0, s.Add("value"))
 
-	if s.Size() != 1 {
-		t.Error("add: Store length is not 1")
-	}
+	assert.EqualValues(t, 1, s.Size())
 }
 
 func TestStoreGetIndex(t *testing.T) {
-	s := New()
-	s.Store("value1")
-	s.Store("value2")
-	s.Store("value3")
+	s := New[string]()
+	assert.EqualValues(t, 0, s.Add("value1"))
+	assert.EqualValues(t, 1, s.Add("value2"))
+	assert.EqualValues(t, 2, s.Add("value3"))
 
-	if v, ok := s.GetIndex("value2"); !ok || v != 1 {
-		t.Error("getIndex: index is not 1")
-	}
+	v, ok := s.GetIndex("value2")
+	assert.True(t, ok)
+	assert.EqualValues(t, 1, v)
 
-	if s.Size() != 3 {
-		t.Error("getIndex: Store length is not 3")
-	}
+	assert.EqualValues(t, 3, s.Size())
 }
 
 func TestStoreGetValue(t *testing.T) {
-	s := New()
-	s.Store("value1")
-	s.Store("value2")
-	s.Store("value3")
+	s := New[string]()
+	assert.EqualValues(t, 0, s.Add("value1"))
+	assert.EqualValues(t, 1, s.Add("value2"))
+	assert.EqualValues(t, 2, s.Add("value3"))
 
-	if v, ok := s.GetValue(1); !ok || v.(string) != "value2" {
-		t.Error("getValue: value is not 'value2'")
-	}
-	if s.Size() != 3 {
-		t.Error("getValue: Store length is not 3")
-	}
+	v, ok := s.GetValue(1)
+	assert.True(t, ok)
+	assert.Equal(t, "value2", v)
+
+	assert.EqualValues(t, 3, s.Size())
+
+	v, ok = s.GetValue(999)
+	assert.False(t, ok)
+	assert.Equal(t, "", v)
 }
 
 func TestStoreDelete(t *testing.T) {
-	s := New()
-	s.Store("value1")
-	s.Store("value2")
-	s.Store("value3")
+	s := New[string]()
+	assert.EqualValues(t, 0, s.Add("value1"))
+	assert.EqualValues(t, 1, s.Add("value2"))
+	assert.EqualValues(t, 2, s.Add("value3"))
 
-	if s.Size() != 3 {
-		t.Error("delete: Store length is not 3")
-	}
+	assert.EqualValues(t, 3, s.Size())
 
-	s.Del("value1")
-	s.Del("value2")
-	s.Del("value3")
+	s.Delete("value1")
+	s.Delete("value2")
 
-	if s.Size() != 0 {
-		t.Error("delete: Store length is not 0")
-	}
-	if _, ok := s.GetIndex("value2"); ok {
-		t.Error("delete: index exists")
-	}
+	assert.EqualValues(t, 1, s.Size())
+
+	_, ok := s.GetIndex("value2")
+	assert.False(t, ok)
+
+	_, ok = s.GetIndex("value3")
+	assert.True(t, ok)
+
+	_, ok = s.GetValue(1)
+	assert.False(t, ok)
 }
 
 func TestStoreErase(t *testing.T) {
-	s := New()
-	s.Store("value1")
-	s.Store("value2")
-	s.Store("value3")
+	s := New[string]()
+	assert.EqualValues(t, 0, s.Add("value1"))
+	assert.EqualValues(t, 1, s.Add("value2"))
+	assert.EqualValues(t, 2, s.Add("value3"))
 
 	s.Erase()
 
-	s.Store("value1")
-
-	if s.Size() != 1 {
-		t.Error("erase: Store length is not 0")
-	}
+	assert.EqualValues(t, 0, s.Add("value3"))
+	assert.EqualValues(t, 1, s.Size())
 }
 
 func BenchmarkStoreAdd(b *testing.B) {
@@ -95,11 +92,11 @@ func BenchmarkStoreAdd(b *testing.B) {
 	for i := 0; i < 1024; i++ {
 		testSet = append(testSet, strconv.Itoa(i))
 	}
-	store := New()
+	store := New[string]()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, elem := range testSet {
-			store.Store(elem)
+			store.Add(elem)
 		}
 	}
 }
@@ -113,13 +110,13 @@ func BenchmarkStoreDelete(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		store := New()
+		store := New[string]()
 		for _, elem := range testSet {
-			store.Store(elem)
+			store.Add(elem)
 		}
 		b.StartTimer()
 		for _, elem := range testSet {
-			store.Del(elem)
+			store.Delete(elem)
 		}
 	}
 }

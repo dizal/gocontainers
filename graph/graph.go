@@ -8,7 +8,7 @@ import (
 	"github.com/dizal/gocontainers/set"
 )
 
-// Kind - Directed or undirected.
+// Kind of Graph. Directed or undirected.
 type Kind byte
 
 const (
@@ -18,84 +18,89 @@ const (
 	Directed
 )
 
-// Graph ...
-type Graph struct {
-	mx    sync.RWMutex
-	s     map[interface{}]*set.Set
-	kind  Kind
-	edges uint32
+type Graph[T comparable] struct {
+	// several target nodes can be attached to each source node
+	s map[T]set.Set[T]
+	// kind of Graph
+	kind Kind
+	// the number of edges in the graph
+	edges int
+
+	mx sync.RWMutex
 }
 
-// New ...
-func New(kind Kind) *Graph {
-	return &Graph{
-		s:    make(map[interface{}]*set.Set),
+// New creates new Graph.
+func New[T comparable](kind Kind) *Graph[T] {
+	return &Graph[T]{
+		s:    make(map[T]set.Set[T]),
 		kind: kind,
 	}
 }
 
-// AddEdge ...
-func (g *Graph) AddEdge(source, target interface{}) *Graph {
+// AddEdge adds a new edge to the graph.
+func (g *Graph[T]) AddEdge(sourceNode, targetNode T) *Graph[T] {
 	g.mx.Lock()
-	if _, ok := g.s[source]; !ok {
-		g.s[source] = set.New()
+	defer g.mx.Unlock()
+
+	if _, ok := g.s[sourceNode]; !ok {
+		g.s[sourceNode] = set.New[T]()
 	}
-	if _, ok := g.s[target]; !ok {
-		g.s[target] = set.New()
+	if _, ok := g.s[targetNode]; !ok {
+		g.s[targetNode] = set.New[T]()
 	}
-	if g.s[source].Add(target) {
+	if g.s[sourceNode].Add(targetNode) {
 		g.edges++
 	}
 
 	if g.kind == Undirected {
-		if g.s[target].Add(source) {
+		if g.s[targetNode].Add(sourceNode) {
 			g.edges++
 		}
 	}
-	g.mx.Unlock()
+
 	return g
 }
 
-// GetTarget ...
-func (g *Graph) GetTarget(source interface{}) (*set.Set, bool) {
+// GetTargetNodes returns the set of nodes to which the source node is connected.
+func (g *Graph[T]) GetTargetNodes(sourceNode T) (set.Set[T], bool) {
 	g.mx.RLock()
-	t, ok := g.s[source]
-	g.mx.RUnlock()
+	defer g.mx.RUnlock()
+	t, ok := g.s[sourceNode]
 	return t, ok
 }
 
-// Range ...
-func (g *Graph) Range(source interface{}, f func(target interface{}) bool) {
-	if v, ok := g.GetTarget(source); ok {
-		v.Each(func(target interface{}) bool {
+// Range goes through all target nodes of the source node
+func (g *Graph[T]) Range(sourceNode T, f func(targetNode T) bool) {
+	if v, ok := g.GetTargetNodes(sourceNode); ok {
+		v.Each(func(target T) bool {
 			return f(target)
 		})
 	}
 }
 
-// VertexesCount ..
-func (g *Graph) VertexesCount() uint32 {
+// VertexesCount returns the number of nodes in the graph.
+func (g *Graph[T]) VertexesCount() int {
 	g.mx.RLock()
 	defer g.mx.RUnlock()
-	return uint32(len(g.s))
+	return len(g.s)
 }
 
-// EdgesCount ...
-func (g *Graph) EdgesCount() uint32 {
+// EdgesCount returns the number of edges in the graph.
+func (g *Graph[T]) EdgesCount() int {
 	g.mx.RLock()
 	defer g.mx.RUnlock()
 	return g.edges
 }
 
-// Erase ...
-func (g *Graph) Erase() {
+// Erase clears the graph of nodes and edges.
+func (g *Graph[T]) Erase() {
 	g.mx.Lock()
-	g.s = make(map[interface{}]*set.Set)
+	defer g.mx.Unlock()
+	g.s = make(map[T]set.Set[T])
 	g.edges = 0
-	g.mx.Unlock()
 }
 
-func (g *Graph) String() string {
+func (g *Graph[T]) String() string {
 	var buffer strings.Builder
 	buffer.WriteString("\nGraph[\n")
 	for k, v := range g.s {

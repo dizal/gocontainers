@@ -1,7 +1,7 @@
 package graph
 
-func g1() *Graph {
-	g := New(Undirected)
+func g1() *Graph[string] {
+	g := New[string](Undirected)
 
 	//   v1
 	//  /  \
@@ -15,8 +15,8 @@ func g1() *Graph {
 	return g
 }
 
-func g2() *Graph {
-	g := New(Undirected)
+func g2() *Graph[string] {
+	g := New[string](Undirected)
 	//   v1
 	//  /  \
 	// v2--v3
@@ -26,8 +26,8 @@ func g2() *Graph {
 	return g
 }
 
-func g3() *Graph {
-	g := New(Undirected)
+func g3() *Graph[string] {
+	g := New[string](Undirected)
 
 	//    v0
 	//    |
@@ -52,8 +52,8 @@ func g3() *Graph {
 	return g
 }
 
-func g4() *Graph {
-	g := New(Undirected)
+func g4() *Graph[string] {
+	g := New[string](Undirected)
 
 	//    v1
 	//   / | \
@@ -67,8 +67,8 @@ func g4() *Graph {
 	return g
 }
 
-func g5() *Graph {
-	g := New(Undirected)
+func g5() *Graph[string] {
+	g := New[string](Undirected)
 
 	//   c_v1                           L0
 	//  /    \

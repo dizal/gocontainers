@@ -7,103 +7,89 @@ import (
 	"github.com/dizal/gocontainers/set"
 )
 
+type Level[V comparable] interface {
+	Each(f func(vertexID V, vertex Vertex[V]) bool)
+	Get(vertexID V) (Vertex[V], bool)
+	Contain(vertexID V) bool
+	Len() int
+	ToSlice() []V
+	AddVertex(vertexID V) Vertex[V]
+	AddEdge(source, target V)
+	GetRecursionSibling(checked set.Set[V], vertexID V)
+	GetVertexDegreeMarked(vertex V) int
+	String() string
+}
+
 // Level ...
-type Level struct {
-	id int16
-	l  map[interface{}]*Vertex
-	t  *Tree
+type level[V comparable, T Tree[V]] struct {
+	index    int16
+	vertexes map[V]Vertex[V]
+	tree     T
 }
 
 // NewLevel ...
-func NewLevel(id int16, t *Tree) (*Level, error) {
-	if t == nil {
+func NewLevel[V comparable](index int16, tree Tree[V]) (Level[V], error) {
+	if tree == nil {
 		return nil, fmt.Errorf("tree.Level.NewLevel: tree cannot be null")
 	}
-	return &Level{
-		id: id,
-		t:  t,
-		l:  make(map[interface{}]*Vertex),
+
+	return &level[V, Tree[V]]{
+		index:    index,
+		tree:     tree,
+		vertexes: make(map[V]Vertex[V]),
 	}, nil
 }
 
 // Each ...
-func (l *Level) Each(f func(i interface{}, v *Vertex) bool) {
-	for v := range l.l {
-		f(v, l.l[v])
+func (l *level[V, T]) Each(f func(vertexID V, vertex Vertex[V]) bool) {
+	for v := range l.vertexes {
+		f(v, l.vertexes[v])
 	}
 }
 
 // Get ...
-func (l *Level) Get(v interface{}) (*Vertex, bool) {
-	vv, ok := l.l[v]
+func (l *level[V, T]) Get(vertexID V) (Vertex[V], bool) {
+	vv, ok := l.vertexes[vertexID]
 	return vv, ok
 }
 
 // Contain ...
-func (l *Level) Contain(v interface{}) bool {
-	_, ok := l.l[v]
+func (l *level[V, T]) Contain(vertexID V) bool {
+	_, ok := l.vertexes[vertexID]
 	return ok
 }
 
 // Len ...
-func (l *Level) Len() int {
-	return len(l.l)
+func (l *level[V, T]) Len() int {
+	return len(l.vertexes)
 }
 
 // ToSlice ...
-func (l *Level) ToSlice() []interface{} {
-	s := make([]interface{}, 0, l.Len())
+func (l *level[V, T]) ToSlice() []V {
+	s := make([]V, 0, l.Len())
 
-	for v := range l.l {
+	for v := range l.vertexes {
 		s = append(s, v)
 	}
 
 	return s
 }
 
-// ToStoreSlice ...
-func (l *Level) ToStoreSlice() []interface{} {
-	s := make([]interface{}, 0, l.Len())
-
-	for k := range l.l {
-		if kk, ok := k.(uint32); ok {
-			if v, ok2 := l.t.Store.GetValue(kk); ok2 {
-				s = append(s, v)
-			}
-		}
-
-	}
-
-	return s
-}
-
-// AddVertexWithStore ...
-func (l *Level) AddVertexWithStore(v string) {
-	l.AddVertex(l.t.Store.Store(v))
-}
-
 // AddVertex ...
-func (l *Level) AddVertex(vertex interface{}) *Vertex {
-	if v, ok := l.Get(vertex); ok {
+func (l *level[V, SV]) AddVertex(vertexID V) Vertex[V] {
+	if v, ok := l.Get(vertexID); ok {
 		return v
 	}
 
-	l.t.CountVertex++
-	v := NewVertex()
-	l.l[vertex] = v
+	l.tree.addVetrex()
+	v := NewVertex[V]()
+	l.vertexes[vertexID] = v
 
 	return v
 }
 
-// AddEdgeWithStore ...
-func (l *Level) AddEdgeWithStore(source, target interface{}) {
-	e0 := l.t.Store.Store(source)
-	e1 := l.t.Store.Store(target)
-	l.AddEdge(e0, e1)
-}
-
 // AddEdge ...
-func (l *Level) AddEdge(source, target interface{}) {
+func (l *level[V, T]) AddEdge(source, target V) {
 	// | old | cur | new |
 	// |level|level|level|
 	// |_____|_____|_____|
@@ -118,7 +104,7 @@ func (l *Level) AddEdge(source, target interface{}) {
 	// |     |     |     |
 	// |     |  B←---→X  | new edge
 	// |     |  D←---→X  |
-	l1, l2 := l.t.Level(l.id-1), l.t.Level(l.id-2)
+	l1, l2 := l.tree.L(l.index-1), l.tree.L(l.index-2)
 
 	_, A := l2.Get(target)
 	vB, B := l1.Get(source)
@@ -134,26 +120,26 @@ func (l *Level) AddEdge(source, target interface{}) {
 	if B && D {
 		vB.AddSibling(target)
 		vD.AddSibling(source)
-		l.t.CountEdges++
+		l.tree.addEdge()
 		return
 	}
 
 	if B {
 		l.AddVertex(target).AddParent(source)
 		vB.AddChild(target)
-		l.t.CountEdges++
+		l.tree.addEdge()
 	} else if D {
 		l.AddVertex(source).AddParent(target)
 		vD.AddChild(source)
-		l.t.CountEdges++
+		l.tree.addEdge()
 	}
 }
 
 // GetRecursionSibling ...
-func (l *Level) GetRecursionSibling(checked *set.Set, vertex interface{}) {
-	checked.Add(vertex)
-	if v, ok := l.Get(vertex); ok {
-		v.Siblings.Each(func(vv interface{}) bool {
+func (l *level[V, T]) GetRecursionSibling(checked set.Set[V], vertexID V) {
+	checked.Add(vertexID)
+	if v, ok := l.Get(vertexID); ok {
+		v.Siblings().Each(func(vv V) bool {
 			if !checked.Contain(vv) {
 				l.GetRecursionSibling(checked, vv)
 			}
@@ -163,25 +149,27 @@ func (l *Level) GetRecursionSibling(checked *set.Set, vertex interface{}) {
 }
 
 // GetVertexDegreeMarked ...
-func (l *Level) GetVertexDegreeMarked(vertex interface{}) int {
-	if v, ok := l.Get(vertex); ok {
+func (l *level[V, T]) GetVertexDegreeMarked(vertexID V) int {
+	if v, ok := l.Get(vertexID); ok {
 		d := 0
-		pLevel, cLevel := l.t.Level(l.id-1), l.t.Level(l.id+1)
+		pLevel, cLevel := l.tree.L(l.index-1), l.tree.L(l.index+1)
 
-		v.Parents.Each(func(parent interface{}) bool {
-			if vv, ok := pLevel.Get(parent); ok && vv.Marked {
+		v.Parents().Each(func(parent V) bool {
+			if vv, ok := pLevel.Get(parent); ok && vv.IsMarked() {
 				d++
 			}
 			return true
 		})
-		v.Children.Each(func(child interface{}) bool {
-			if vv, ok := cLevel.Get(child); ok && vv.Marked {
+
+		v.Children().Each(func(child V) bool {
+			if vv, ok := cLevel.Get(child); ok && vv.IsMarked() {
 				d++
 			}
 			return true
 		})
-		v.Siblings.Each(func(sib interface{}) bool {
-			if vv, ok := l.Get(sib); ok && vv.Marked {
+
+		v.Siblings().Each(func(sib V) bool {
+			if vv, ok := l.Get(sib); ok && vv.IsMarked() {
 				d++
 			}
 			return true
@@ -193,25 +181,11 @@ func (l *Level) GetVertexDegreeMarked(vertex interface{}) int {
 	return 0
 }
 
-// intersect ...
-func intersect(l1, l2 *Level) []interface{} {
-	var c []interface{}
-
-	l2.Each(func(i interface{}, _ *Vertex) bool {
-		if l1.Contain(i) {
-			c = append(c, i)
-		}
-		return true
-	})
-
-	return c
-}
-
-func (l *Level) String() string {
+func (l *level[V, T]) String() string {
 	var buffer strings.Builder
-	buffer.WriteString(fmt.Sprintf("L%v{\n", l.id))
+	buffer.WriteString(fmt.Sprintf("L%v{\n", l.index))
 
-	l.Each(func(i interface{}, v *Vertex) bool {
+	l.Each(func(i V, v Vertex[V]) bool {
 		buffer.WriteString(fmt.Sprintf("\t%v = %v\n", i, v))
 		return true
 	})

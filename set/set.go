@@ -5,20 +5,31 @@ import (
 	"unsafe"
 )
 
-// Set ...
-type Set struct {
-	arr map[interface{}]struct{}
+type Set[T comparable] interface {
+	Add(value T) bool
+	Delete(value T) bool
+	Contain(value T) bool
+	Len() int
+	Each(f func(value T) bool)
+	ToSlice() []T
+	IsEmpty() bool
+	Erase()
+	String() string
 }
 
-// New ...
-func New() *Set {
-	return &Set{
-		arr: make(map[interface{}]struct{}),
+type set[T comparable] struct {
+	arr map[T]struct{}
+}
+
+// New creates a new Set.
+func New[T comparable]() Set[T] {
+	return &set[T]{
+		arr: make(map[T]struct{}),
 	}
 }
 
-// Add ...
-func (s *Set) Add(value interface{}) bool {
+// Add adds a new value to the set.
+func (s *set[T]) Add(value T) bool {
 	if !s.Contain(value) {
 		s.arr[value] = struct{}{}
 		return true
@@ -26,8 +37,8 @@ func (s *Set) Add(value interface{}) bool {
 	return false
 }
 
-// Delete ...
-func (s *Set) Delete(value interface{}) bool {
+// Delete removes a value from the set.
+func (s *set[T]) Delete(value T) bool {
 	if s.Contain(value) {
 		delete(s.arr, value)
 		return true
@@ -35,19 +46,19 @@ func (s *Set) Delete(value interface{}) bool {
 	return false
 }
 
-// Contain ...
-func (s *Set) Contain(value interface{}) bool {
+// Contain checks that the value is present in the set.
+func (s *set[T]) Contain(value T) bool {
 	_, ok := s.arr[value]
 	return ok
 }
 
-// Len ...
-func (s *Set) Len() int {
+// Len returns the length of the set.
+func (s *set[T]) Len() int {
 	return len(s.arr)
 }
 
-// Each ...
-func (s *Set) Each(f func(value interface{}) bool) {
+// Each goes through all the values of the set in the callback function.
+func (s *set[T]) Each(f func(value T) bool) {
 	for v := range s.arr {
 		if !f(v) {
 			break
@@ -55,26 +66,24 @@ func (s *Set) Each(f func(value interface{}) bool) {
 	}
 }
 
-// ToSlice ...
-func (s *Set) ToSlice() []interface{} {
-	arr := make([]interface{}, 0, s.Len())
+// ToSlice converts the set to a slice.
+func (s *set[T]) ToSlice() []T {
+	arr := make([]T, 0, s.Len())
 	for k := range s.arr {
 		arr = append(arr, k)
 	}
 	return arr
 }
 
-// IsEmpty ...
-func (s *Set) IsEmpty() bool {
+func (s *set[T]) IsEmpty() bool {
 	return s.Len() == 0
 }
 
-// Erase ...
-func (s *Set) Erase() {
-	s.arr = make(map[interface{}]struct{})
+func (s *set[T]) Erase() {
+	s.arr = make(map[T]struct{})
 }
 
-func (s *Set) String() string {
+func (s *set[T]) String() string {
 	if s.Len() == 0 {
 		return "SET<>"
 	}
